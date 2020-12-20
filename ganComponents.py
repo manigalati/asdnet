@@ -435,10 +435,10 @@ class HRResSegNet_DS(nn.Module):
         self.dropout23d = dropout23DUnit(prob=dropoutRate, nd=nd)
         
         #high-resoluton module for the lateral connection between the largest feature map
-        self.hr_block1 = DilatedResUnit(32, 32, kernel_size=3, stride=1, dilation=2, nd=3)
-        self.hr_block2 = DilatedResUnit(32, 32, kernel_size=3, stride=1, dilation=3, nd=3)
-        self.hr_block3 = DilatedResUnit(32, 32, kernel_size=3, stride=1, dilation=4, nd=3)
-        self.hr_block4 = DilatedResUnit(32, 32, kernel_size=3, stride=1, dilation=5, nd=3)
+        self.hr_block1 = DilatedResUnit(32, 32, kernel_size=3, stride=1, dilation=2, nd=nd)
+        self.hr_block2 = DilatedResUnit(32, 32, kernel_size=3, stride=1, dilation=3, nd=nd)
+        self.hr_block3 = DilatedResUnit(32, 32, kernel_size=3, stride=1, dilation=4, nd=nd)
+        self.hr_block4 = DilatedResUnit(32, 32, kernel_size=3, stride=1, dilation=5, nd=nd)
         
         if isRandomConnection:
             self.up_block256_128 = ResUpUnit(256, 128, spatial_dropout_rate = 0.1, nd=nd)

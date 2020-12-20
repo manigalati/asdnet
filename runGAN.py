@@ -18,6 +18,10 @@ from morpologicalTransformation import denoiseImg_closing,denoiseImg_isolation
 
 import ast
 
+#FRA
+import torchvision
+from ACDC import *
+
 '''
 This copy of code is a comprehensive gan (cnn or fcn for discriminator) for segmentation, 
 part of the work have been submitted to TNNLS, and the fully convolutional discriminator one is new
@@ -121,8 +125,8 @@ def main():
 
 ########################################configs####################################
     #opt = parser.parse_args()
-    print opt
-    print 'test my list, opt.input_sz: ',opt.input_sz
+    print(opt)
+    print('test my list, opt.input_sz: ',opt.input_sz)
     if opt.isSemiSupervised:
         trainSemiSupervisedNet()
     else:
@@ -137,6 +141,7 @@ def trainSupervisedNet():
     given_weight = given_weight.cuda()
     given_ids = given_ids.cuda()
 
+    global data_generator_test,path_test,criterion_CEND,criterion_dice
     path_test = opt.path_test
     path_patients_h5 = opt.path_patients_h5
     path_patients_h5_test = opt.path_patients_h5_test
@@ -144,7 +149,6 @@ def trainSupervisedNet():
 ########################################configs####################################
 #     running_loss = 0
     ## step.1 prepare data flow
-    global data_generator_test,path_test,criterion_CEND,criterion_dice
     if opt.NDim == 3:
         data_generator = Generator_3D_patches(path_patients_h5,opt.batchSize,inputKey='dataMR',outputKey='dataSeg')
         data_generator_test = Generator_3D_patches(path_patients_h5_test,opt.batchSize,inputKey='dataMR',outputKey='dataSeg')
@@ -163,6 +167,26 @@ def trainSupervisedNet():
 #     inputs=torch.randn(1000,1,32,32)
 #     targets=torch.LongTensor(1000)
 
+    #NEW
+    train_transform=torchvision.transforms.Compose([
+        AddPadding((352,352)),
+        CenterCrop((352,352)),
+        OneHot(),
+        ToTensor()
+    ])
+
+    test_transform=torchvision.transforms.Compose([
+        AddPadding((352,352)),
+        CenterCrop((352,352)),
+        ToTensor()
+    ])
+
+    ids = random.sample(range(1,101),100)
+    train_ids = ids[:80]
+    val_ids = ids[80:]
+
+    data_generator=ACDCDataLoader("preprocessed/training",patient_ids=train_ids,has_gt=True,transform=train_transform,batch_size=opt.batchSize)
+    data_generator_test=ACDCDataLoader("preprocessed/training",patient_ids=val_ids,has_gt=True,transform=train_transform,batch_size=opt.batchSize)
     ## step.2 prepare network architecture
     if opt.isSegReg:
         netG = ResSegRegNet(opt.in_channels, opt.out_channels, nd=opt.NDim)
@@ -218,9 +242,9 @@ def trainSupervisedNet():
     criterion = criterion.cuda()
     criterion_dice = criterion_dice.cuda()
     criterion_CEND = criterion_CEND.cuda()
-    criterion_BCEND = criterion_BCEND.cuda()
+    #criterion_BCEND = criterion_BCEND.cuda()
     criterion_BCE2D = criterion_BCE2D.cuda()
-    criterion_WCEND = criterion_WCEND.cuda()
+    #criterion_WCEND = criterion_WCEND.cuda()
     
     if opt.isSegReg:
         criterion_MSE = nn.MSELoss()
@@ -245,8 +269,8 @@ def trainSupervisedNet():
             opt.start_epoch = checkpoint["epoch"] + 1
             netG.load_state_dict(checkpoint["model"])
             if opt.isAdLoss:
-            	checkpoint = torch.load(opt.resume_netD)
-                netD.load_state_dict(checkpoint)
+              checkpoint = torch.load(opt.resume_netD)
+              netD.load_state_dict(checkpoint)
         else:
             print("=> no checkpoint found at '{}'".format(opt.resume))
 
@@ -269,16 +293,20 @@ def trainSupervisedNet():
         lossG_Reg = Variable(torch.FloatTensor([0]).cuda()) 
         lossD = Variable(torch.FloatTensor([0]).cuda()) 
         for m in range(0,opt.iter_size):
+          print("YOOOOOOOOOOOOOOOOOOOOOO:"+str(m))
+          patient=next(data_generator)
+          for dsk,batch in enumerate(patient):
+            print("YEIIIIIIIIIIIIIIIIIIII:"+str(dsk))
             if opt.isSegReg:
                 inputs,labels, regGT1, regGT2, regGT3 = data_generator.next()
             elif opt.isContourLoss:
                 inputs,labels,contours = data_generator.next()
             else:
-                inputs,labels = data_generator.next()
+                inputs,labels = batch["data"],torch.argmax(batch["gt"],axis=1)
                 #print inputs.size,labels.size
     
             labels = np.squeeze(labels,axis=1)
-            labels = labels.astype(int)
+            labels = labels.int()
             
             if opt.isContourLoss:
                 contours = np.squeeze(contours,axis=1)
@@ -287,8 +315,8 @@ def trainSupervisedNet():
                 contours = contours.cuda()
                 contours = Variable(contours)
             
-            inputs = torch.from_numpy(inputs)
-            labels = torch.from_numpy(labels)
+            #inputs = torch.from_numpy(inputs)
+            #labels = torch.from_numpy(labels)
             inputs = inputs.cuda()
             labels = labels.cuda()
             
@@ -470,7 +498,7 @@ def trainSupervisedNet():
 
         #update network parameters after iter_size weight computation
         if opt.isAdLoss:
-			optimizerD.step()
+          optimizerD.step()
         optimizerG.step() 
         #empty memory
         #del outputD
@@ -487,7 +515,7 @@ def trainSupervisedNet():
         if iter%opt.decLREvery==0 and iter>0:
             opt.lr = opt.lr*0.5
             adjust_learning_rate(optimizerG, opt.lr)
-            print 'now the learning rate is {}'.format(opt.lr)
+            print('now the learning rate is {}'.format(opt.lr))
     print('Finished Training')
     
 
@@ -552,36 +580,36 @@ def showTestStatistics(netG, lossG_G, loss_dice, lossG_D, lossG_focal, lossG_con
 #         print type(outputD_fake.cpu().data[0].numpy())
     
     if iter%opt.showTrainLossEvery==0: #print every 2000 mini-batches
-        print '************************************************'
-        print 'time now is: ' + time.asctime(time.localtime(time.time()))
+        print('************************************************')
+        print('time now is: ' + time.asctime(time.localtime(time.time())))
         #if opt.isAdLoss:
         #    print 'the outputD_real for iter {}'.format(iter), ' is ',outputD_real.cpu().data[0].numpy()[0]
         #    print 'the outputD_fake for iter {}'.format(iter), ' is ',outputD_fake.cpu().data[0].numpy()[0]
 #             print 'running loss is ',running_loss
-        print 'average running loss for generator between iter [%d, %d] is: %.3f'%(iter - 100 + 1,iter,running_loss/100)
+        print('average running loss for generator between iter [%d, %d] is: %.3f'%(iter - 100 + 1,iter,running_loss/100))
         if opt.isAdLoss:
-            print 'loss for discriminator at iter ',iter, ' is %f'%lossD.data[0]
-        print 'total loss for generator at iter ',iter, ' is %f'%lossG.data[0]
+            print('loss for discriminator at iter ',iter, ' is %f'%lossD.data[0])
+        print('total loss for generator at iter ',iter, ' is %f'%lossG.data[0])
         if opt.isDiceLoss and opt.isSoftmaxLoss and opt.isAdLoss and opt.isSegReg:
-            print 'lossG_D, lossG_G and loss_dice loss_Reg are %.2f, %.2f and %.2f respectively.'%(lossG_D.data[0], lossG_G.data[0], loss_dice.data[0], lossG_Reg.data[0])
+            print('lossG_D, lossG_G and loss_dice loss_Reg are %.2f, %.2f and %.2f respectively.'%(lossG_D.data[0], lossG_G.data[0], loss_dice.data[0], lossG_Reg.data[0]))
         elif opt.isDiceLoss and opt.isSoftmaxLoss and opt.isAdLoss:
-            print 'lossG_D, lossG_G and loss_dice are %.2f, %.2f and %.2f respectively.'%(lossG_D.data[0], lossG_G.data[0], loss_dice.data[0])
+            print('lossG_D, lossG_G and loss_dice are %.2f, %.2f and %.2f respectively.'%(lossG_D.data[0], lossG_G.data[0], loss_dice.data[0]))
         elif opt.isDiceLoss and opt.isSoftmaxLoss:
-            print 'lossG_G and loss_dice are %.2f and %.2f respectively.'%(lossG_G.data[0], loss_dice.data[0])
+            print('lossG_G and loss_dice are %.2f and %.2f respectively.'%(lossG_G.data[0], loss_dice.data[0]))
         elif opt.isDiceLoss and opt.isFocalLoss and opt.isAdLoss:
-            print 'lossG_D, lossG_focal and loss_dice are %.2f, %.2f and %.2f respectively.'%(lossG_D.data[0], lossG_focal.data[0], loss_dice.data[0])    
+            print('lossG_D, lossG_focal and loss_dice are %.2f, %.2f and %.2f respectively.'%(lossG_D.data[0], lossG_focal.data[0], loss_dice.data[0]))    
         elif opt.isSoftmaxLoss and opt.isAdLoss:
-            print 'lossG_D and lossG_G are %.2f and %.2f respectively.'%(lossG_D.data[0], lossG_G.data[0])
+            print('lossG_D and lossG_G are %.2f and %.2f respectively.'%(lossG_D.data[0], lossG_G.data[0]))
         elif opt.isFocalLoss and opt.isAdLoss:
-            print 'lossG_D and lossG_focal are %.2f and %.2f respectively.'%(lossG_D.data[0], lossG_focal.data[0])    
+            print('lossG_D and lossG_focal are %.2f and %.2f respectively.'%(lossG_D.data[0], lossG_focal.data[0]))    
         elif opt.isDiceLoss and opt.isAdLoss:
-            print 'lossG_D and loss_dice are %.2f and %.2f respectively.'%(lossG_D.data[0], loss_dice.data[0])
+            print('lossG_D and loss_dice are %.2f and %.2f respectively.'%(lossG_D.data[0], loss_dice.data[0]))
         
         if opt.isContourLoss:
-            print 'lossG_contour is {}'.format(lossG_contour.data[0])
+            print('lossG_contour is {}'.format(lossG_contour.data[0]))
 
-        print 'cost time for iter [%d, %d] is %.2f'%(iter - 100 + 1,iter, time.time()-start)
-        print '************************************************'
+        print('cost time for iter [%d, %d] is %.2f'%(iter - 100 + 1,iter, time.time()-start))
+        print('************************************************')
         running_loss = 0.0
        
         start = time.time()
@@ -594,7 +622,7 @@ def showTestStatistics(netG, lossG_G, loss_dice, lossG_D, lossG_focal, lossG_con
         torch.save(state,opt.prefixModelName+'%d.pt'%iter)
         if opt.isAdLoss:
             torch.save(netD.state_dict(), opt.prefixModelName+'netD_%d.pt'%iter)
-        print 'save model: '+opt.prefixModelName+'%d.pt'%iter
+        print('save model: '+opt.prefixModelName+'%d.pt'%iter)
     
     if iter%opt.showTestPerformanceEvery==0: #test one subject  
         # to test on the validation dataset in the format of h5 
@@ -618,8 +646,8 @@ def showTestStatistics(netG, lossG_G, loss_dice, lossG_D, lossG_focal, lossG_con
         lossG_G = criterion_CEND(outputG,torch.squeeze(labels,dim=1))
         loss_dice = criterion_dice(outputG,torch.squeeze(labels,dim=1))
         del outputG
-        print '.......come to validation stage: iter {}'.format(iter),'........'
-        print 'lossG_G and loss_dice are %.2f and %.2f respectively.'%(lossG_G.data[0], loss_dice.data[0])
+        print('.......come to validation stage: iter {}'.format(iter),'........')
+        print('lossG_G and loss_dice are %.2f and %.2f respectively.'%(lossG_G.data[0], loss_dice.data[0]))
         
         ####release all the unoccupied memory####
         torch.cuda.empty_cache()
@@ -635,32 +663,32 @@ def showTestStatistics(netG, lossG_G, loss_dice, lossG_D, lossG_focal, lossG_con
         #for training data in pelvicSeg
         if opt.how2normalize == 1:
             maxV, minV=np.percentile(mrnp, [99 ,1])
-            print 'maxV,',maxV,' minV, ',minV
+            print('maxV,',maxV,' minV, ',minV)
             mrnp=(mrnp-mu)/(maxV-minV)
-            print 'unique value: ',np.unique(ctnp)
+            print('unique value: ',np.unique(ctnp))
 
         #for training data in pelvicSeg
         elif opt.how2normalize == 2:
             maxV, minV = np.percentile(mrnp, [99 ,1])
-            print 'maxV,',maxV,' minV, ',minV
+            print('maxV,',maxV,' minV, ',minV)
             mrnp = (mrnp-mu)/(maxV-minV)
-            print 'unique value: ',np.unique(ctnp)
+            print('unique value: ',np.unique(ctnp))
         
         #for training data in pelvicSegRegH5
         elif opt.how2normalize== 3:
             std = np.std(mrnp)
             mrnp = (mrnp - mu)/std
-            print 'maxV,',np.ndarray.max(mrnp),' minV, ',np.ndarray.min(mrnp)
+            print('maxV,',np.ndarray.max(mrnp),' minV, ',np.ndarray.min(mrnp))
             
         elif opt.how2normalize== 4:
             maxV, minV = np.percentile(mrnp, [99.2 ,1])
-            print 'maxV is: ',np.ndarray.max(mrnp)
+            print('maxV is: ',np.ndarray.max(mrnp))
             mrnp[np.where(mrnp>maxV)] = maxV
-            print 'maxV is: ',np.ndarray.max(mrnp)
+            print('maxV is: ',np.ndarray.max(mrnp))
             mu=np.mean(mrnp)
             std = np.std(mrnp)
             mrnp = (mrnp - mu)/std
-            print 'maxV,',np.ndarray.max(mrnp),' minV, ',np.ndarray.min(mrnp)
+            print('maxV,',np.ndarray.max(mrnp),' minV, ',np.ndarray.min(mrnp))
 
 #             full image version with average over the overlapping regions
 #             ct_estimated = testOneSubject(mrnp,ctnp,[3,168,112],[1,168,112],[1,8,8],netG,'Segmentor_model_%d.pt'%iter)
@@ -686,7 +714,7 @@ def showTestStatistics(netG, lossG_G, loss_dice, lossG_D, lossG_focal, lossG_con
         
         matOut,_ = testOneSubject(matFA,matGT, opt.out_channels, opt.input_sz, opt.output_sz, opt.test_step_sz, netG,opt.prefixModelName+'%d.pt'%iter, nd=opt.NDim)
         ct_estimated = np.zeros([ctnp.shape[0],ctnp.shape[1],ctnp.shape[2]])
-        print 'matOut shape: ',matOut.shape
+        print('matOut shape: ',matOut.shape)
         if opt.isTestonAttentionRegion:
             ct_estimated[:, y1:y2, x1:x2] = matOut
         else:
@@ -699,10 +727,10 @@ def showTestStatistics(netG, lossG_G, loss_dice, lossG_D, lossG_focal, lossG_con
 #             diceProstate = dice(ct_estimated,ctnp,2)
 #             diceRectumm = dice(ct_estimated,ctnp,3)
         
-        print 'pred: ',ct_estimated.dtype, ' shape: ',ct_estimated.shape
-        print 'gt: ',ctnp.dtype,' shape: ',ct_estimated.shape
+        print('pred: ',ct_estimated.dtype, ' shape: ',ct_estimated.shape)
+        print('gt: ',ctnp.dtype,' shape: ',ct_estimated.shape)
         #print 'dice1 = ',diceBladder,' dice2= ',diceProstate,' dice3= ',diceRectumm
-        print 'dice1 = ',diceBladder
+        print('dice1 = ',diceBladder)
 
         volout = sitk.GetImageFromArray(ct_estimated)
         sitk.WriteImage(volout,opt.prefixPredictedFN+'{}'.format(iter)+'.nii.gz')    
@@ -720,14 +748,13 @@ def trainSemiSupervisedNet():
     given_weight = given_weight.cuda()
     given_ids = given_ids.cuda()
 
+    global data_generator_test,path_test,criterion_CEND,criterion_dice
     path_test = opt.path_test
     path_patients_h5 = opt.path_patients_h5
     path_patients_unlabeled_h5 = opt.path_patients_unlabeled_h5
     path_patients_h5_test = opt.path_patients_h5_test
 
 ########################################configs####################################
-
-    global data_generator_test,path_test,criterion_CEND,criterion_dice
     
     ## step.1 prepare data flow
     if opt.NDim == 3:
@@ -1169,7 +1196,7 @@ def trainSemiSupervisedNet():
         if iter%opt.decLREvery==0 and iter>0:
             opt.lr = opt.lr*0.1
             adjust_learning_rate(optimizerG, opt.lr)
-            print 'now the learning rate is {}'.format(opt.lr)
+            print('now the learning rate is {}'.format(opt.lr))
         
     print('Finished Training')
     

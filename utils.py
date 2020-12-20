@@ -13,15 +13,18 @@ from torch.autograd import Variable
 import cv2
 import copy
 
+#NEW
+import ast
+
 #Dong add keys here
 def Generator_2D_slices(path_patients,batchsize,inputKey='dataMR',outputKey='dataCT'):
     #path_patients='/home/dongnie/warehouse/CT_patients/test_set/'
-    print path_patients
+    print(path_patients)
     patients = os.listdir(path_patients)#every file  is a hdf5 patient
     while True:
         
         for idx,namepatient in enumerate(patients):
-            print namepatient            
+            print(namepatient)          
             f=h5py.File(os.path.join(path_patients,namepatient))
             #dataMRptr=f['dataMR']
             dataMRptr=f[inputKey]
@@ -71,7 +74,7 @@ def Generator_2D_slices(path_patients,batchsize,inputKey='dataMR',outputKey='dat
             X=X[inds,...]
             y=y[inds,...]
             
-            print 'y shape ', y.shape                   
+            print('y shape ', y.shape)                   
             for i_batch in xrange(int(X.shape[0]/batchsize)):
                 yield (X[i_batch*batchsize:(i_batch+1)*batchsize,...],  y[i_batch*batchsize:(i_batch+1)*batchsize,...])
 
@@ -79,12 +82,12 @@ def Generator_2D_slices(path_patients,batchsize,inputKey='dataMR',outputKey='dat
 #Dong add keys here
 def Generator_2D_slicesV1(path_patients,batchsize,inputKey='dataMR',segKey='dataCT', contourKey='dataContour'):
     #path_patients='/home/dongnie/warehouse/CT_patients/test_set/'
-    print path_patients
+    print(path_patients)
     patients = os.listdir(path_patients)#every file  is a hdf5 patient
     while True:
         
         for idx,namepatient in enumerate(patients):
-            print namepatient            
+            print(namepatient)            
             f=h5py.File(os.path.join(path_patients,namepatient))
             #dataMRptr=f['dataMR']
             dataMRptr=f[inputKey]
@@ -145,7 +148,7 @@ def Generator_2D_slicesV1(path_patients,batchsize,inputKey='dataMR',segKey='data
             y=y[inds,...]
             y1=y1[inds,...]
             
-            print 'y shape ', y.shape                   
+            print('y shape ', y.shape)                   
             for i_batch in xrange(int(X.shape[0]/batchsize)):
                 yield (X[i_batch*batchsize:(i_batch+1)*batchsize,...],  y[i_batch*batchsize:(i_batch+1)*batchsize,...],y1[i_batch*batchsize:(i_batch+1)*batchsize,...])
                 
@@ -161,13 +164,13 @@ Output:
 '''
 def Generator_2D_slices_variousKeys(path_patients,batchsize, keys):
     #path_patients='/home/dongnie/warehouse/CT_patients/test_set/'
-    print path_patients
+    print(path_patients)
     patients = os.listdir(path_patients)#every file  is a hdf5 patient
     numOfKeys = len(keys)
     while True:
         
         for idx,namepatient in enumerate(patients):
-            print namepatient            
+            print(namepatient)            
             f = h5py.File(os.path.join(path_patients,namepatient))
             
             data0 = f[keys[0]].value
@@ -223,7 +226,7 @@ def Generator_2D_slices_variousKeys(path_patients,batchsize, keys):
             # X=X[inds,...]
 #             y=y[inds,...]
             
-            print 'X shape ', X.shape                   
+            print('X shape ', X.shape)                   
             for i_batch in xrange(int(X.shape[0]/batchsize)):
 #                 yield (X[i_batch*batchsize:(i_batch+1)*batchsize,...,keyInd],  y[i_batch*batchsize:(i_batch+1)*batchsize,...])
                 yield ([ X[i_batch*batchsize:(i_batch+1)*batchsize,...,keyInd] for keyInd in range(0,numOfKeys)])
@@ -234,12 +237,12 @@ def Generator_2D_slices_variousKeys(path_patients,batchsize, keys):
 '''
 def Generator_3D_patches_unlabeled(path_patients, batchsize, inputKey='dataMR'):
 #path_patients='/home/dongnie/warehouse/CT_patients/test_set/'
-    print path_patients
+    print(path_patients)
     patients = os.listdir(path_patients)#every file  is a hdf5 patient
     while True:
         
         for idx,namepatient in enumerate(patients):
-            print namepatient            
+            print(namepatient)            
             f=h5py.File(os.path.join(path_patients,namepatient))
             dataMRptr=f[inputKey]
             dataMR=dataMRptr.value
@@ -249,7 +252,7 @@ def Generator_3D_patches_unlabeled(path_patients, batchsize, inputKey='dataMR'):
             #dataCT=np.squeeze(dataCT)
 
             dataMR=(dataMR)
-            print 'mr shape h5 ',dataMR.shape
+            print('mr shape h5 ',dataMR.shape)
 
             
             shapedata=dataMR.shape
@@ -270,7 +273,7 @@ def Generator_3D_patches_unlabeled(path_patients, batchsize, inputKey='dataMR'):
 #             X = np.expand_dims(X, axis=4)     
             X=X.astype(np.float32)
             
-            print 'X shape ', X.shape
+            print('X shape ', X.shape)
                              
             for i_batch in xrange(int(X.shape[0]/batchsize)):
                 yield (X[i_batch*batchsize:(i_batch+1)*batchsize,...])
@@ -278,12 +281,12 @@ def Generator_3D_patches_unlabeled(path_patients, batchsize, inputKey='dataMR'):
  
 def Generator_3D_patches(path_patients, batchsize, inputKey='dataMR', outputKey='dataCT'):
     #path_patients='/home/dongnie/warehouse/CT_patients/test_set/'
-    print path_patients
+    print(path_patients)
     patients = os.listdir(path_patients)#every file  is a hdf5 patient
     while True:
         
         for idx,namepatient in enumerate(patients):
-            print namepatient            
+            print(namepatient)            
             f=h5py.File(os.path.join(path_patients,namepatient))
             dataMRptr=f[inputKey]
             dataMR=dataMRptr.value
@@ -295,7 +298,7 @@ def Generator_3D_patches(path_patients, batchsize, inputKey='dataMR', outputKey=
 
             dataMR=(dataMR)
             dataCT=(dataCT)
-            print 'mr shape h5 ',dataMR.shape
+            print('mr shape h5 ',dataMR.shape)
 
             
             shapedata=dataMR.shape
@@ -325,8 +328,8 @@ def Generator_3D_patches(path_patients, batchsize, inputKey='dataMR', outputKey=
 #             y=np.expand_dims(y, axis=4)
             y=y.astype(np.float32)
             
-            print 'y shape ', y.shape
-            print 'X shape ', X.shape
+            print('y shape ', y.shape)
+            print('X shape ', X.shape)
                              
             for i_batch in xrange(int(X.shape[0]/batchsize)):
                 yield (X[i_batch*batchsize:(i_batch+1)*batchsize,...],  y[i_batch*batchsize:(i_batch+1)*batchsize,...])
@@ -343,13 +346,13 @@ Output:
 '''
 def Generator_3D_slices_variousKeys(path_patients, batchsize, keys):
     # path_patients='/home/dongnie/warehouse/CT_patients/test_set/'
-    print path_patients
+    print(path_patients)
     patients = os.listdir(path_patients)  # every file  is a hdf5 patient
     numOfKeys = len(keys)
     while True:
 
         for idx, namepatient in enumerate(patients):
-            print namepatient
+            print(namepatient)
             f = h5py.File(os.path.join(path_patients, namepatient))
 
             data0 = f[keys[0]].value
@@ -404,7 +407,7 @@ def Generator_3D_slices_variousKeys(path_patients, batchsize, keys):
             # X = X[inds, ...]
             #             y=y[inds,...]
 
-            print 'X shape ', X.shape
+            print('X shape ', X.shape)
             for i_batch in xrange(int(X.shape[0] / batchsize)):
                 #                 yield (X[i_batch*batchsize:(i_batch+1)*batchsize,...,keyInd],  y[i_batch*batchsize:(i_batch+1)*batchsize,...])
                 yield ([X[i_batch * batchsize:(i_batch + 1) * batchsize, ..., keyInd] for keyInd in range(0, numOfKeys)])
@@ -600,9 +603,9 @@ def testOneSubject(MR_image,CT_GT,MR_patch_sz,CT_patch_sz,step, netG, modelPath)
     margin3 = int((dFA[2]-dSeg[2])/2)
     cubicCnt = 0
     marginD = [margin1,margin2,margin3]
-    print 'matFA shape is ',matFA.shape
+    print('matFA shape is ',matFA.shape)
     matFAOut = np.zeros([row+2*marginD[0],col+2*marginD[1],leng+2*marginD[2]])
-    print 'matFAOut shape is ',matFAOut.shape
+    print('matFAOut shape is ',matFAOut.shape)
     matFAOut[marginD[0]:row+marginD[0],marginD[1]:col+marginD[1],marginD[2]:leng+marginD[2]] = matFA
     
     matFAOut[0:marginD[0],marginD[1]:col+marginD[1],marginD[2]:leng+marginD[2]] = matFA[0:marginD[0],:,:] #we'd better flip it along the first dimension
@@ -618,7 +621,7 @@ def testOneSubject(MR_image,CT_GT,MR_patch_sz,CT_patch_sz,step, netG, modelPath)
     matOut = np.zeros((matSeg.shape[0],matSeg.shape[1],matSeg.shape[2]))
     used = np.zeros((matSeg.shape[0],matSeg.shape[1],matSeg.shape[2]))+eps
     #fid=open('trainxxx_list.txt','a');
-    print 'last i ',row-dSeg[0]
+    print('last i ',row-dSeg[0])
     for i in range(0,row-dSeg[0]+1,step[0]):
 #         print 'i ',i
         for j in range(0,col-dSeg[1]+1,step[1]):
@@ -1005,7 +1008,7 @@ class OneHotEncode(object):
                 ohlabel[:,c, :,:,:] = (label_a == c).astype(np.uint8)
         else:
             ohlabel = np.zeros((label_a.shape[0],self.nclass,label_a.shape[1],label_a.shape[2])).astype(np.uint8)
-            print 'NDim should be 2 or 3'
+            print('NDim should be 2 or 3')
 
         return torch.from_numpy(ohlabel)
     

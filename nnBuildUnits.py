@@ -273,7 +273,7 @@ class residualUnit3(nn.Module):
     def __init__(self, in_size, out_size, isDilation=None, isEmptyBranch1=None, activation=F.relu, nd=2):
         super(residualUnit3, self).__init__()
         #         mid_size = in_size/2
-        mid_size = out_size/2 ###I think it should better be half the out size instead of the input size
+        mid_size = out_size//2 ###I think it should better be half the out size instead of the input size
 #         print 'line 74, in and out size are, ',in_size,' ',mid_size
 
         if isDilation:
@@ -406,8 +406,8 @@ class DilatedResUnit(nn.Module):
     def __init__(self, in_size, out_size, kernel_size=3, stride=1, dilation=2, nd=2):
         super(DilatedResUnit,self).__init__()
         self.nd = nd
-        mid_size = out_size/1
-        padding = dilation*(kernel_size-1)/2
+        mid_size = out_size//1
+        padding = dilation*(kernel_size-1)//2
         self.conv1_bn_relu = conv23D_bn_relu_Unit(in_channels=in_size, out_channels=mid_size, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation, nd=nd)
         self.conv2_bn_relu = conv23D_bn_relu_Unit(in_channels=mid_size, out_channels=mid_size, kernel_size=kernel_size, stride=stride, padding=padding, dilation=dilation, nd=nd)
         self.relu = nn.ReLU()
@@ -1275,12 +1275,12 @@ class GeneralizedDiceLoss4Organs(nn.Module):
                 targets:(n, h, w, d): 0,1,...,C-1       
         """
         assert not targets.requires_grad
-        assert inputs.dim() == 5, inputs.shape
-        assert targets.dim() == 4, targets.shape
+        #assert inputs.dim() == 5, inputs.shape
+        #assert targets.dim() == 4, targets.shape
         assert inputs.size(0) == targets.size(0), "{0} vs {1} ".format(inputs.size(0), targets.size(0))
         assert inputs.size(2) == targets.size(1), "{0} vs {1} ".format(inputs.size(2), targets.size(1))
         assert inputs.size(3) == targets.size(2), "{0} vs {1} ".format(inputs.size(3), targets.size(2))
-        assert inputs.size(4) == targets.size(3), "{0} vs {1} ".format(inputs.size(4), targets.size(3))
+        #assert inputs.size(4) == targets.size(3), "{0} vs {1} ".format(inputs.size(4), targets.size(3))
         
         
         eps = Variable(torch.cuda.FloatTensor(1).fill_(0.000001))
@@ -1300,7 +1300,7 @@ class GeneralizedDiceLoss4Organs(nn.Module):
         
         target1 = Variable(torch.unsqueeze(targets.data,1)) #Nx1xHxW
         targets_one_hot = Variable(torch.cuda.FloatTensor(inputSZ).zero_()) #NxCxHxW
-        targets_one_hot.scatter_(1, target1, 1) #scatter along the 'numOfDims' dimension
+        targets_one_hot.scatter_(1, target1.long(), 1) #scatter along the 'numOfDims' dimension
  
         ###### Now the prediction and target has become one-hot format
         ###### Compute the dice for each organ
@@ -1538,14 +1538,14 @@ class WeightedDiceLoss4Organs(Function):
             intersect = intersects[i]
             gt = torch.div(target, union)
             IoU2 = intersect/(union*union)
-            print 'line 419: IoU2: ',IoU2
+            print('line 419: IoU2: ',IoU2)
 
 #             pred = torch.mul(input[:, 1], IoU2) #input[:,1] is equal to input[:,1,...]
             pred = torch.mul(input, IoU2) #input[:,1] is equal to input[:,1,...]
-            print 'line 423: input: ',input.cpu()[1,1,1,...]
-            print 'line 423: pred: ',pred.cpu()[1,1,1,...]
+            print('line 423: input: ',input.cpu()[1,1,1,...])
+            print('line 423: pred: ',pred.cpu()[1,1,1,...])
 #             print 'gt size: ',gt.size(),' pred size: ',pred.size()
-            print 'line 423: gt: ', gt.cpu()[1,1,1]
+            print('line 423: gt: ', gt.cpu()[1,1,1])
             dDice = torch.add(torch.mul(gt, 2), torch.mul(pred, -4))
             if i==0:
                 prev = torch.mul(dDice, grad_output[0])
@@ -1553,8 +1553,8 @@ class WeightedDiceLoss4Organs(Function):
                 curr = torch.mul(dDice, -grad_output[0])
                 grad_input = torch.cat((prev,curr), 0)
                 prev = curr
-        print 'line 429: grad_output: ',grad_output.cpu()        
-        print 'line 430: grad_input: ', grad_input.cpu()[1,1,1,...]
+        print('line 429: grad_output: ',grad_output.cpu())  
+        print('line 430: grad_input: ', grad_input.cpu()[1,1,1,...])
         return grad_input , None
 
 
@@ -1932,7 +1932,7 @@ class FeatureExtractor(nn.Module):
 def adjust_learning_rate(optimizer, lr):
 #     lr = opt.lr * (0.1 ** (epoch // opt.step))
     for param_group in optimizer.param_groups:
-        print "current lr is ", param_group["lr"]
+        print("current lr is ", param_group["lr"])
         if param_group["lr"] > lr:
             param_group["lr"] = lr  
     return lr

@@ -143,7 +143,7 @@ def main():
         pr1=dice(labelimg,filtered_array,1)
         pr2=dice(labelimg,filtered_array,2)
         pr3=dice(labelimg,filtered_array,3)
-        print 'dice for sub%d: '%ind,pr0, ' ',pr1,' ',pr2,' ',pr3
+        print('dice for sub%d: '%ind,pr0, ' ',pr1,' ',pr2,' ',pr3)
         preVol=sitk.GetImageFromArray(filtered_array)
         sitk.WriteImage(preVol,prefn)
     
